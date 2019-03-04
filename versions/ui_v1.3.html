@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+     body {
+      margin: 0 auto;
+      width: 1031px;
+     }
+     video {
+       object-fit: fill;
+     }
+     span.idname {
+       position: absolute;
+       top: 143px;
+       margin: 0px 430px;
+       color: #fff;
+       font-weight: bold;
+     }
+     span.processing {
+	position: absolute;
+       top: 183px;
+       margin: 0px 430px;
+       color: #fff;
+       font-weight: bold;     
+     }
+     span.clicking {
+        position: absolute;
+       top: 163px;
+       margin: 0px 430px;
+       color: #fff;
+       font-weight: bold;    
+     }
+    </style>
+  </head>
+  <body onload="init();">
+<!--
+    <button onclick="startWebcam();">Start WebCam</button>
+    <button onclick="stopWebcam();">Stop WebCam</button> 
+    <button onclick="snapshot();">Take Snapshot</button> 
+-->
+    <video width=1031 height=672 id="video" autoplay></video>
+    <canvas width="900" height="672" id="myCanvas" hidden></canvas>  
+
+    <span id="idname" class="idname" hidden></span>
+    <span id="processing" class="processing" hidden>Identifying you...</span>
+    <span id="clicking" class="clicking" hidden>Clicking your picture in 3 seconds, still please!</span>
+
+  </body>
+  <script>
+      //--------------------
+      // GET USER MEDIA CODE
+      //--------------------
+          navigator.getUserMedia = ( navigator.getUserMedia ||
+                             navigator.webkitGetUserMedia ||
+                             navigator.mozGetUserMedia ||
+                             navigator.msGetUserMedia);
+
+      var video;
+      var webcamStream;
+      var startTime, endTime;
+      var idname, proc, clic;
+
+      function startFRProcess(firstTime){
+        var delay = 0;
+        delay = 3000;
+        if (firstTime ) {
+	  //delay = 1000;
+        } else {
+	  //delay = 500;
+          video.play();
+        }
+        
+        clic.removeAttribute("hidden");	
+        var totInt = parseInt(delay / 1000);
+	var secInt = setInterval(function(i, j){
+          if( totInt > 0 ) {
+            clic.textContent = "Clicking your picture in "+ totInt +" seconds, still please!";
+            totInt--;
+	  } else {
+            startTime = new Date().getTime();
+            snapshot();
+            totInt = parseInt(delay / 1000);
+            clearInterval(secInt);
+	  }
+	}, 1000);
+
+      }
+
+      function startWebcam() {
+        if (navigator.getUserMedia) {
+           navigator.getUserMedia (
+
+              // constraints
+              {
+                 video: true,
+                 audio: false
+              },
+
+              // successCallback
+              function(localMediaStream) {
+                 video = document.querySelector('video');
+                 video.srcObject = localMediaStream;
+                 webcamStream = localMediaStream;
+                 console.log("Allowed webcam access!");
+                 startFRProcess(true);
+              },
+
+              // errorCallback
+              function(err) {
+                 console.log("The following error occured: " + err);
+              }
+           );
+        } else {
+           console.log("getUserMedia not supported");
+        }  
+      }
+
+      function stopWebcam() {
+          webcamStream.stop();
+      }
+      //---------------------
+      // TAKE A SNAPSHOT CODE
+      //---------------------
+      var canvas, ctx;
+
+      function init() {
+        // Get the canvas and obtain a context for
+        // drawing in it
+        canvas = document.getElementById("myCanvas");
+ 	//canvas.width = window.innerWidth;
+        //canvas.height = window.innerHeight;
+       
+ 	ctx = canvas.getContext('2d');
+       
+        idname = document.getElementById("idname");
+        proc = document.getElementById("processing");
+        clic = document.getElementById("clicking");
+
+        startWebcam();
+      }
+
+      function snapshot() {
+         // Draws current image from the video element into the canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+	video.pause();
+        
+        clic.setAttribute("hidden","hidden");
+        proc.removeAttribute("hidden");
+        
+        imgData = canvas.toDataURL('image/png');
+         
+        var url = 'http://127.0.0.1:5000/testpost';
+        
+        //var formData = new FormData();
+        //formData.append('image', imgData);
+        var formData = imgData;
+
+        var xhr = new XMLHttpRequest();
+        xhr.withCredentials = false;
+
+        xhr.addEventListener("readystatechange", function () {
+          if (this.readyState === 4) {
+            
+	    proc.setAttribute("hidden", "hidden");
+            idname.removeAttribute("hidden");
+
+            var rt = JSON.parse(this.responseText);
+            endTime = new Date().getTime();
+	    idname.textContent = "It is " + rt.person.toUpperCase() + "! (took " + ( endTime - startTime )/1000 + "seconds)";
+
+	    setTimeout(function(){
+		startFRProcess(false);
+	    }, 2000);
+
+          }
+        });
+
+        xhr.open("POST", "http://localhost:5000/testpost");
+        xhr.setRequestHeader("cache-control", "no-cache", "no-cors");
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send(formData); 
+          
+      }
+
+  </script>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Affine Face Recognition</title>
+  <meta name="author" content="Rakesh Roshan">
+  <meta name="contact" content="rakesh.roshan@affineanalytics.com">
+  <meta name="description" content="Web page for face recognition process">
+  <style>
+  body {
+    margin: 0 auto;
+    width: 1031px;
+  }
+  video {
+    object-fit: fill;
+  }
+  span.idname {
+    position: absolute;
+    /* top: 143px; */
+    color: #fff;
+    font-weight: bold;
+    width: 1031px;
+    text-align: left;
+  }
+  span.processing {
+    position: absolute;
+    top: 35Vh;
+    color: #fff;
+    font-weight: bold;
+    width: 1031px;
+    text-align: center;
+  }
+  span.clicking {
+    position: absolute;
+    top: 35Vh;
+    color: #fff;
+    font-weight: bold;
+    width: 1031px;
+    text-align: center;
+  }
+  span.seconds {
+    position: absolute;
+    width: 1031px;
+    top: 40Vh;
+    text-align: center;
+    color: #fff;
+    font-weight: normal;
+    font-size: 100px;
+  }
+  </style>
+</head>
+<body onload="init();">
+
+  <video width=1031 height=672 id="video" autoplay></video>
+  <canvas width="900" height="672" id="myCanvas" hidden></canvas>
+
+  <!-- <span id="idname" class="idname" hidden></span> -->
+  <!-- <span id="processing" class="processing" hidden>Identifying you...</span> -->
+  <span id="clicking" class="clicking" hidden></span>
+  <span id="seconds" class="seconds" hidden></span>
+
+</body>
+<script>
+//--------------------
+// GET USER MEDIA CODE
+//--------------------
+// navigator.mediaDevices.getUserMedia = ( navigator.mediaDevices.getUserMedia );
+
+
+var video;
+var webcamStream;
+var startTime, endTime;
+var idname, proc, clic, secs;
+var canvas, ctx;
+var cntr = 0;
+
+
+function snapshot() {
+  // Draws current image from the video element into the canvas
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // video.pause();
+
+  clic.setAttribute("hidden","hidden");
+  secs.setAttribute("hidden","hidden");
+  //proc.removeAttribute("hidden");
+
+  imgData = canvas.toDataURL('image/png');
+
+  var url = 'http://127.0.0.1:5000/testpost';
+   //var url = 'http://34.237.6.64:5000/testpost';
+  var formData = imgData;
+
+  var xhr = new XMLHttpRequest();
+  xhr.withCredentials = false;
+
+  xhr.addEventListener("readystatechange", function () {
+    if (this.readyState === 4) {
+
+      // proc.setAttribute("hidden", "hidden");
+      // idname.removeAttribute("hidden");
+
+      var rt = JSON.parse(this.responseText);
+      console.log("response is :::",rt);
+
+      // var idnames = document.getElementsByClassName("idname");
+      // console.log("idnames length",idnames.length);
+      // for (var i = 0; i < idnames.length; i++) {
+      //   console.log("id names: ", idnames[i].id);
+      //   idnames[i].remove();
+      // }
+
+
+      document.querySelectorAll('.idname').forEach(function(a) {
+  a.remove()
+})
+
+      for(var i=0;i<rt.length;i++){
+        // endTime = new Date().getTime();
+        // totalTime = (endTime - startTime) / 1000;
+        // apiTime = rt.model_proc_time;
+        // uiTime = totalTime - apiTime;
+        // apiTimeInSecs = (apiTime).toFixed("2") + "s";
+        // uiTimeInSecs = (uiTime).toFixed("2") + "s";
+        // console.log("person is::",rt.person);
+        // idname.textContent = "HI  ";
+        var obj=rt[i];
+        var span_obj = document.createElement("span");
+        // console.log("object is::",span_obj);
+        span_obj.className = "idname"
+        span_obj.id = "idname" + i.toString()
+
+         console.log("object is::",obj.person);
+         // console.log("obj name ::", span_obj.class);
+         span_obj.textContent = "Hi " + obj.person.toUpperCase() + " !  ";
+        //idname.textContent += " ( UI: " + uiTimeInSecs + "; API: "+ apiTimeInSecs +" )";
+        var cot=obj.coords[1]
+        var col=obj.coords[0]
+        span_obj.style.top = cot.toString()+'px';
+        span_obj.style.padding = '0px 0px 0px ' + col.toString()+'px'
+        document.body.appendChild(span_obj);
+        console.log(obj.coords[0]);
+        // idname.textContent += obj.coords ;
+
+      }
+
+
+      setTimeout(function(){
+        startFRProcess(false);
+      }, 1000);
+
+    }
+  });
+
+  xhr.open("POST", url);
+  xhr.setRequestHeader("cache-control", "no-cache", "no-cors");
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.send(formData);
+
+}
+
+
+function startFRProcess(firstTime){
+  var delay = 0;
+  delay = 1000;
+  if (firstTime ) {
+    // Do nothing as video autoplays.
+  } else {
+    video.play();
+  }
+
+   clic.removeAttribute("hidden");
+    secs.textContent = 1;
+    secs.removeAttribute("hidden");
+  var totInt = parseInt(delay / 1000);
+  var secInt = setInterval(function(i, j){
+    if( totInt > 0 ) {
+      secs.textContent = totInt;
+      totInt--;
+    } else {
+      startTime = new Date().getTime();
+      snapshot();
+      totInt = parseInt(delay / 1000);
+      clearInterval(secInt);
+    }
+  }, 1000);
+
+}
+
+
+function startWebcam() {
+  if (navigator.mediaDevices.getUserMedia) {
+
+    video = document.querySelector('video');
+
+    if (navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      })
+      .then(function(stream) {
+        video.srcObject = stream;
+        console.log("Webcam accessed!");
+        startFRProcess(true);
+      })
+      .catch(function(err0r) {
+        console.log("Something went wrong!");
+      });
+    }
+
+} else {
+  console.log("navigator.mediaDevices.getUserMedia not supported");
+  alert("Your browser do not support media devices like webcam!");
+}
+}
+
+
+function init() {
+  // Get the canvas and obtain a context for
+  // drawing in it
+  canvas = document.getElementById("myCanvas");
+  ctx = canvas.getContext('2d');
+
+  idname = document.getElementById("idname");
+  // proc = document.getElementById("processing");
+   clic = document.getElementById("clicking");
+  secs = document.getElementById("seconds");
+
+  startWebcam();
+}
+
+</script>
+</html>

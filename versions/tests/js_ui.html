@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <title></title>
+</head>
+<body>
+  <button type="button" name="button" onclick="getTest()">Get</button>
+  <button type="button" name="button" onclick="postTest()">Post</button>
+</body>
+<script>
+  function getTest(){
+  console.log("test get");
+    var data = null;
+
+    var xhr = new XMLHttpRequest();
+    xhr.withCredentials = false;
+
+    xhr.addEventListener("readystatechange", function () {
+      if (this.readyState === 4) {
+        console.log(this.responseText);
+      }
+    });
+
+    xhr.open("GET", "http://localhost:5000/testget");
+    xhr.setRequestHeader("cache-control", "no-cache", "no-cors");
+    xhr.setRequestHeader("Content-Type", "application/json");
+
+    xhr.send(data);
+  }
+  
+  function postTest(){
+    console.log("test post");
+    var formData = "test";
+    //var formData = new FormData();
+    //formData.append('image', 'testimagedata');
+    
+    var xhr = new XMLHttpRequest();
+    xhr.withCredentials = false;
+
+    xhr.addEventListener("readystatechange", function () {
+      if (this.readyState === 4) {
+        console.log(this.responseText);
+      }
+    });
+
+    xhr.open("POST", "http://localhost:5000/testpost");
+    xhr.setRequestHeader("cache-control", "no-cache", "no-cors");
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(formData);
+  }
+</script>
+</html>
